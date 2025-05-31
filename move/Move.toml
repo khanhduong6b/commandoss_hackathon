@@ -1,0 +1,9 @@
+[package]
+name = "swap_manager"
+version = "0.0.1"
+edition = "2024.beta"
+
+[dependencies]
+
+[addresses]
+swap_manager = "0x0" 
