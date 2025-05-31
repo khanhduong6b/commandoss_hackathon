@@ -1,6 +1,8 @@
 import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
 import { MIST_PER_SUI } from '@mysten/sui/utils';
+import dotenv from "dotenv";
+dotenv.config({ path: ".env" });
 
 // SwapManager Contract Configuration
 const SWAP_CONTRACT = {
@@ -15,7 +17,7 @@ console.log(SWAP_CONTRACT);
 // Create SuiClient
 const suiClient = new SuiClient({ url: getFullnodeUrl('testnet') });
 
-function swapController() {
+function swapService() {
     const SELF = {
         // Helper function to format amounts
         formatAmount: (amount, decimals = 9) => {
@@ -595,4 +597,4 @@ function swapController() {
     }
 }
 
-export default new swapController(); 
+export default new swapService(); 

@@ -1,50 +1,34 @@
 import dotenv from "dotenv";
+dotenv.config({ path: ".env" });
 import express from "express";
 import cluster from "cluster";
 import home from "./route/home.js";
 import path from "path";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
 
-dotenv.config({ path: ".env" });
 
-if (cluster.isMaster) {
-    let cpuCount = 4; //require('os').cpus().length
-    for (let i = 0; i < cpuCount; ++i) {
-        let worker = cluster.fork();
-        worker.on("message", function (request) {
-            // listen message from worker
-            handleRequestFromWorker(request);
-        });
-    }
-} else {
-    const app = express();
+const app = express();
 
-    app.use(express.json({ limit: "25mb" }));
-    app.use(express.urlencoded({ limit: "25mb", extended: true }));
-    app.enable("trust proxy");
-    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 1;
-    app.use("/v1", home);
-    app.listen(process.env.PORT, function () {
-        console.log(
-            `Worker ${process.pid} listen on port ${process.env.PORT}`
-        );
-    });
-}
-
-cluster.on("exit", function (worker) {
-    console.log(`Worker ${worker.process.pid} die. Call new worker`);
-    const w = cluster.fork();
-    w.on("message", function (request) {
-        handleRequestFromWorker(request);
-    });
+const server = new McpServer({
+    name: "onchain-swap",
+    version: "1.0.0",
+    capabilities: {
+        resources: {},
+        tools: {},
+    },
 });
 
-function handleRequestFromMaster(request) {
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ limit: "25mb", extended: true }));
+app.enable("trust proxy");
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 1;
+app.use("/v1", home);
+app.listen(process.env.PORT, async function () {
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
     console.log(
-        `Worker ${process.pid} receive request ${JSON.stringify(
-            request
-        )} from master`
+        `Worker ${process.pid} listen on port ${process.env.PORT}`
     );
-}
-
-function handleRequestFromWorker(request) {
-}
+});
