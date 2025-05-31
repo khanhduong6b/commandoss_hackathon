@@ -14,7 +14,7 @@ ADMIN_CAP_ID=0x... # Optional for admin functions
 ### **Import Routes**
 ```javascript
 import swapRoutes from './route/onchain/swapRoutes.js';
-app.use('/api/swap', swapRoutes);
+app.use('http://localhost:3000/v1/swap', swapRoutes);
 ```
 
 ---
@@ -23,7 +23,7 @@ app.use('/api/swap', swapRoutes);
 
 ### **1. Get SUI to USDC Quote**
 ```http
-GET /api/swap/quote/sui-to-usdc?amount=1.5
+GET http://localhost:3000/v1/swap/quote/sui-to-usdc?amount=1.5
 ```
 
 **Parameters:**
@@ -43,7 +43,7 @@ GET /api/swap/quote/sui-to-usdc?amount=1.5
 
 ### **2. Get USDC to SUI Quote**
 ```http
-GET /api/swap/quote/usdc-to-sui?amount=5.0
+GET http://localhost:3000/v1/swap/quote/usdc-to-sui?amount=5.0
 ```
 
 **Parameters:**
@@ -67,7 +67,7 @@ GET /api/swap/quote/usdc-to-sui?amount=5.0
 
 ### **3. Get Available Trading Pairs**
 ```http
-GET /api/swap/pools
+GET http://localhost:3000/v1/swap/pools
 ```
 
 **Response:**
@@ -80,7 +80,7 @@ GET /api/swap/pools
 
 ### **4. Get Pool Configuration**
 ```http
-GET /api/swap/pool/config?pair_name=SUI_USDC
+GET http://localhost:3000/v1/swap/pool/config?pair_name=SUI_USDC
 ```
 
 **Parameters:**
@@ -102,7 +102,7 @@ GET /api/swap/pool/config?pair_name=SUI_USDC
 
 ### **5. Get DEX Configuration**
 ```http
-GET /api/swap/dex/config?dex_id=4
+GET http://localhost:3000/v1/swap/dex/config?dex_id=4
 ```
 
 **Parameters:**
@@ -129,7 +129,7 @@ GET /api/swap/dex/config?dex_id=4
 
 ### **6. Prepare SUI to USDC Swap**
 ```http
-POST /api/swap/prepare/sui-to-usdc
+POST http://localhost:3000/v1/swap/prepare/sui-to-usdc
 Content-Type: application/json
 
 {
@@ -157,7 +157,7 @@ Content-Type: application/json
 
 ### **7. Prepare USDC to SUI Swap**
 ```http
-POST /api/swap/prepare/usdc-to-sui
+POST http://localhost:3000/v1/swap/prepare/usdc-to-sui
 Content-Type: application/json
 
 {
@@ -185,7 +185,7 @@ Content-Type: application/json
 
 ### **8. Submit Signed Transaction**
 ```http
-POST /api/swap/submit
+POST http://localhost:3000/v1/swap/submit
 Content-Type: application/json
 
 {
@@ -221,7 +221,7 @@ Content-Type: application/json
 
 ### **9. Get Transaction Status**
 ```http
-GET /api/swap/status/8x9YzAbc123DefGhi456...
+GET http://localhost:3000/v1/swap/status/8x9YzAbc123DefGhi456...
 ```
 
 **Response:**
@@ -245,7 +245,7 @@ GET /api/swap/status/8x9YzAbc123DefGhi456...
 
 ### **10. Get User Token Balances**
 ```http
-GET /api/swap/user/tokens?user_address=0xa0b378174a39ad78ee6b7ec479ca8db658a99bf94f3db3891dc01531f4da2f82
+GET http://localhost:3000/v1/swap/user/tokens?user_address=0xa0b378174a39ad78ee6b7ec479ca8db658a99bf94f3db3891dc01531f4da2f82
 ```
 
 **Response:**
@@ -269,7 +269,7 @@ GET /api/swap/user/tokens?user_address=0xa0b378174a39ad78ee6b7ec479ca8db658a99bf
 
 ### **11. Get Recent Swap History**
 ```http
-GET /api/swap/history?count=10
+GET http://localhost:3000/v1/swap/history?count=10
 ```
 
 **Parameters:**
@@ -296,7 +296,7 @@ GET /api/swap/history?count=10
 
 ### **12. Log AI Command**
 ```http
-POST /api/swap/ai/log
+POST http://localhost:3000/v1/swap/ai/log
 Content-Type: application/json
 
 {
@@ -327,11 +327,11 @@ Content-Type: application/json
 
 ```javascript
 // 1. Get quote
-const quoteResponse = await fetch('/api/swap/quote/sui-to-usdc?amount=1.5');
+const quoteResponse = await fetch('http://localhost:3000/v1/swap/quote/sui-to-usdc?amount=1.5');
 const quote = await quoteResponse.json();
 
 // 2. Prepare transaction
-const prepareResponse = await fetch('/api/swap/prepare/sui-to-usdc', {
+const prepareResponse = await fetch('http://localhost:3000/v1/swap/prepare/sui-to-usdc', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -346,7 +346,7 @@ const preparedTx = await prepareResponse.json();
 const signedTx = await userWallet.signTransaction(preparedTx.transaction_data);
 
 // 4. Submit signed transaction
-const submitResponse = await fetch('/api/swap/submit', {
+const submitResponse = await fetch('http://localhost:3000/v1/swap/submit', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -356,7 +356,7 @@ const submitResponse = await fetch('/api/swap/submit', {
 const result = await submitResponse.json();
 
 // 5. Check transaction status
-const statusResponse = await fetch(`/api/swap/status/${result.transaction_hash}`);
+const statusResponse = await fetch(`http://localhost:3000/v1/swap/status/${result.transaction_hash}`);
 const status = await statusResponse.json();
 ```
 
@@ -414,13 +414,13 @@ const status = await statusResponse.json();
 
 ```bash
 # Get quote
-curl "http://localhost:3000/api/swap/quote/sui-to-usdc?amount=1.5"
+curl "http://localhost:3000http://localhost:3000/v1/swap/quote/sui-to-usdc?amount=1.5"
 
 # Get user tokens
-curl "http://localhost:3000/api/swap/user/tokens?user_address=0xa0b378174a39ad78ee6b7ec479ca8db658a99bf94f3db3891dc01531f4da2f82"
+curl "http://localhost:3000http://localhost:3000/v1/swap/user/tokens?user_address=0xa0b378174a39ad78ee6b7ec479ca8db658a99bf94f3db3891dc01531f4da2f82"
 
 # Prepare swap
-curl -X POST http://localhost:3000/api/swap/prepare/sui-to-usdc \
+curl -X POST http://localhost:3000http://localhost:3000/v1/swap/prepare/sui-to-usdc \
   -H "Content-Type: application/json" \
   -d '{"amount":1.5,"slippage":0.01,"user_address":"0xa0b378174a39ad78ee6b7ec479ca8db658a99bf94f3db3891dc01531f4da2f82"}'
 ```
