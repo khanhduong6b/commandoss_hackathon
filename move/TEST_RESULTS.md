@@ -23,10 +23,10 @@
 ## 🚀 Deployment Information
 
 **Network**: Sui Devnet  
-**Package ID**: `0x44663d3c38241f2b61596d11b036d4611ce1fa03b6691be1e58e3e69652a99ea`  
-**SwapManager Object**: `0x1f3e1b6760caed75d98cec99d6c3cd854603cf5032a658eb02412615701e44bf`  
-**AdminCap Object**: `0xe2efa97e9c945d0fd9099f7a33b0ab8e36904d08785838a1a449feec1cc5948c`  
-**Transaction Digest**: `1hM5YPQLopEJay5gyazwq1BpfZmqNjWGK688QvdNgih`  
+**Package ID**: `0x478a6c8c713236562ba56e4f77c20323536236f0f094440253f528a4600dcd9e`  
+**SwapManager Object**: `0x0b119b821718f92c8e26a4b9ad0a90767d61c210735c5c29aa4691e01f6cbdad`  
+**AdminCap Object**: `0x865f42c460142fb0cca0ce983c9b93aec88cc5ad7ca11ec921987cbe9766f921`  
+**Transaction Digest**: `BHTZTjzK4uQ1Uuo8PEzDcFbmjd29txA4Ee96t3QA1EvG`  
 
 ## 🔧 DEX Configurations
 
