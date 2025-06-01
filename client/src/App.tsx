@@ -23,7 +23,7 @@ function App() {
       >
         <Box>
           <Heading size="6" style={{ color: "var(--blue-11)" }}>
-            AI Web3 Portfolio Assistant
+          Multi Dex MCP
           </Heading>
         </Box>
 
