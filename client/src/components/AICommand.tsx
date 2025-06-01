@@ -132,7 +132,7 @@ export function AICommand() {
     return (
         <Box>
             <Heading size="5" mb="4" style={{ color: "var(--blue-11)" }}>
-                AI Portfolio Assistant (MCP Powered)
+                Multi Dex MCP
             </Heading>
 
             {/* Command Input */}
