@@ -2,8 +2,9 @@
   "servers": {
     "sui-swap-manager": {
       "command": "node",
-      "args": ["./server/route/mcp/mcpController.js"],
+      "args": ["./server/index.js"],
       "env": {
+        "PORT": "3000",
         "SWAP_PACKAGE_ID": "0x44663d3c38241f2b61596d11b036d4611ce1fa03b6691be1e58e3e69652a99ea",
         "SWAP_MANAGER_ID": "0x1f3e1b6760caed75d98cec99d6c3cd854603cf5032a658eb02412615701e44bf"
       }

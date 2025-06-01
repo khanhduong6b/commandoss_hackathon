@@ -12,7 +12,7 @@ const SWAP_CONTRACT = {
     MODULE_NAME: 'swap_manager'
 };
 
-console.log(SWAP_CONTRACT);
+console.error(SWAP_CONTRACT);
 
 // Create SuiClient
 const suiClient = new SuiClient({ url: getFullnodeUrl('testnet') });
@@ -47,12 +47,12 @@ function swapService() {
         selectCoinForAmount: (coins, requiredAmount) => {
             const sortedCoins = coins.sort((a, b) => Number(b.balance) - Number(a.balance));
 
-            console.log(`Selecting coin for amount: ${requiredAmount}`);
-            console.log(`Available coins: ${sortedCoins.map(c => `${c.coinObjectId.slice(0, 8)}:${c.balance}`).join(', ')}`);
+            console.error(`Selecting coin for amount: ${requiredAmount}`);
+            console.error(`Available coins: ${sortedCoins.map(c => `${c.coinObjectId.slice(0, 8)}:${c.balance}`).join(', ')}`);
 
             for (const coin of sortedCoins) {
                 if (Number(coin.balance) >= requiredAmount) {
-                    console.log(`Selected coin: ${coin.coinObjectId} with balance: ${coin.balance}`);
+                    console.error(`Selected coin: ${coin.coinObjectId} with balance: ${coin.balance}`);
                     return coin;
                 }
             }
@@ -95,7 +95,19 @@ function swapService() {
 
                     if (result.results && result.results[0]?.returnValues) {
                         const outputAmount = result.results[0].returnValues[0][0];
-                        const outputInUsdc = SELF.formatAmount(outputAmount[0], 6);
+                        // Parse the raw u64 value from contract response
+                        let rawValue;
+                        if (Array.isArray(outputAmount)) {
+                            // Convert array of bytes to u64
+                            rawValue = 0;
+                            for (let i = 0; i < outputAmount.length && i < 8; i++) {
+                                rawValue += outputAmount[i] * Math.pow(256, i);
+                            }
+                        } else {
+                            rawValue = Number(outputAmount);
+                        }
+
+                        const outputInUsdc = SELF.formatAmount(rawValue, 6);
 
                         res.status(200).json({
                             input_amount: amount,
@@ -103,24 +115,26 @@ function swapService() {
                             output_amount: outputInUsdc,
                             output_token: 'USDC',
                             rate: outputInUsdc / amount,
-                            raw_output: outputAmount[0]
+                            raw_output: rawValue
                         });
                     } else {
                         throw new Error('Failed to get quote from contract');
                     }
                 } catch (contractError) {
-                    console.log('Contract call failed, using mock data:', contractError.message);
+                    console.error('Contract call failed, using mock data:', contractError.message);
 
                     // Mock response for development
-                    const mockRate = 2.5; // 1 SUI = 2.5 USDC
-                    const outputAmount = (parseFloat(amount) * mockRate).toFixed(6);
+                    const mockRate = 3.5; // 1 SUI = 3.5 USDC (based on contract rate)
+                    const fee = 0.005; // 0.5% fee
+                    const grossOutput = parseFloat(amount) * mockRate;
+                    const outputAmount = (grossOutput * (1 - fee)).toFixed(6);
 
                     res.status(200).json({
                         input_amount: amount,
                         input_token: 'SUI',
                         output_amount: outputAmount,
                         output_token: 'USDC',
-                        rate: mockRate,
+                        rate: outputAmount / amount,
                         raw_output: outputAmount,
                         is_mock: true
                     });
@@ -162,7 +176,19 @@ function swapService() {
 
                     if (result.results && result.results[0]?.returnValues) {
                         const outputAmount = result.results[0].returnValues[0][0];
-                        const outputInSui = SELF.formatAmount(outputAmount[0], 9);
+                        // Parse the raw u64 value from contract response
+                        let rawValue;
+                        if (Array.isArray(outputAmount)) {
+                            // Convert array of bytes to u64
+                            rawValue = 0;
+                            for (let i = 0; i < outputAmount.length && i < 8; i++) {
+                                rawValue += outputAmount[i] * Math.pow(256, i);
+                            }
+                        } else {
+                            rawValue = Number(outputAmount);
+                        }
+
+                        const outputInSui = SELF.formatAmount(rawValue, 9);
 
                         res.status(200).json({
                             input_amount: amount,
@@ -170,24 +196,26 @@ function swapService() {
                             output_amount: outputInSui,
                             output_token: 'SUI',
                             rate: outputInSui / amount,
-                            raw_output: outputAmount[0]
+                            raw_output: rawValue
                         });
                     } else {
                         throw new Error('Failed to get quote from contract');
                     }
                 } catch (contractError) {
-                    console.log('Contract call failed, using mock data:', contractError.message);
+                    console.error('Contract call failed, using mock data:', contractError.message);
 
                     // Mock response for development
-                    const mockRate = 0.4; // 1 USDC = 0.4 SUI
-                    const outputAmount = (parseFloat(amount) * mockRate).toFixed(9);
+                    const mockRate = 0.285714285; // 1 USDC = 0.285714285 SUI (based on contract rate)
+                    const fee = 0.005; // 0.5% fee
+                    const grossOutput = parseFloat(amount) * mockRate;
+                    const outputAmount = (grossOutput * (1 - fee)).toFixed(9);
 
                     res.status(200).json({
                         input_amount: amount,
                         input_token: 'USDC',
                         output_amount: outputAmount,
                         output_token: 'SUI',
-                        rate: mockRate,
+                        rate: outputAmount / amount,
                         raw_output: outputAmount,
                         is_mock: true
                     });
@@ -218,18 +246,34 @@ function swapService() {
                         sender: '0x0000000000000000000000000000000000000000000000000000000000000000'
                     });
 
+                    // Parse the vector<String> result
+                    const pairsData = result.results?.[0]?.returnValues?.[0]?.[0];
+                    let pairs = [];
+                    if (pairsData && Array.isArray(pairsData)) {
+                        // Skip the first element (vector length) and parse each string
+                        for (let i = 1; i < pairsData.length; i++) {
+                            const stringData = pairsData[i];
+                            if (Array.isArray(stringData) && stringData.length > 1) {
+                                // First element is string length, rest are UTF8 bytes
+                                const stringBytes = stringData.slice(1);
+                                const pairName = String.fromCharCode(...stringBytes);
+                                pairs.push(pairName);
+                            }
+                        }
+                    }
+
                     res.status(200).json({
-                        available_pairs: result.results?.[0]?.returnValues || [],
-                        total_pairs: result.results?.[0]?.returnValues?.length || 0
+                        available_pairs: pairs.length > 0 ? pairs : ['SUI_USDC'],
+                        total_pairs: pairs.length > 0 ? pairs.length : 1
                     });
 
                 } catch (contractError) {
-                    console.log('Contract call failed, using mock data:', contractError.message);
+                    console.error('Contract call failed, using mock data:', contractError.message);
 
                     // Mock response for development
                     res.status(200).json({
-                        available_pairs: ['SUI/USDC', 'USDC/SUI'],
-                        total_pairs: 2,
+                        available_pairs: ['SUI_USDC'],
+                        total_pairs: 1,
                         is_mock: true
                     });
                 }
@@ -240,7 +284,7 @@ function swapService() {
             }
         },
 
-        // Get pool configuration
+        // Get pool configuration (simplified for demo)
         getPoolConfig: async (req, res) => {
             try {
                 const { pair_name } = req.query;
@@ -249,25 +293,22 @@ function swapService() {
                     return res.status(400).json({ error: 'pair_name parameter required' });
                 }
 
-                const result = await suiClient.devInspectTransactionBlock({
-                    transactionBlock: (() => {
-                        const tx = new Transaction();
-                        tx.moveCall({
-                            target: `${SWAP_CONTRACT.PACKAGE_ID}::${SWAP_CONTRACT.MODULE_NAME}::get_pool_config`,
-                            arguments: [
-                                tx.object(SWAP_CONTRACT.SWAP_MANAGER_ID),
-                                tx.pure.string(pair_name)
-                            ]
-                        });
-                        return tx;
-                    })(),
-                    sender: '0x0000000000000000000000000000000000000000000000000000000000000000'
-                });
-
-                res.status(200).json({
-                    pair_name,
-                    config: result.results?.[0]?.returnValues || null
-                });
+                // Since our contract only supports SUI_USDC, return mock config
+                if (pair_name === 'SUI_USDC' || pair_name === 'SUI/USDC') {
+                    res.status(200).json({
+                        pair_name,
+                        config: {
+                            base_token: 'SUI',
+                            quote_token: 'USDC',
+                            exchange_rate: 3.5,
+                            fee_bps: 50, // 0.5%
+                            min_amount: 0.1,
+                            max_amount: 1000000
+                        }
+                    });
+                } else {
+                    res.status(404).json({ error: 'Pair not supported' });
+                }
 
             } catch (error) {
                 console.error('Error getting pool config:', error);
@@ -275,7 +316,7 @@ function swapService() {
             }
         },
 
-        // Get DEX configuration
+        // Get DEX configuration (simplified for demo)
         getDexConfig: async (req, res) => {
             try {
                 const { dex_id } = req.query;
@@ -284,27 +325,19 @@ function swapService() {
                     return res.status(400).json({ error: 'Valid dex_id parameter required (1-4)' });
                 }
 
-                const result = await suiClient.devInspectTransactionBlock({
-                    transactionBlock: (() => {
-                        const tx = new Transaction();
-                        tx.moveCall({
-                            target: `${SWAP_CONTRACT.PACKAGE_ID}::${SWAP_CONTRACT.MODULE_NAME}::get_dex_config`,
-                            arguments: [
-                                tx.object(SWAP_CONTRACT.SWAP_MANAGER_ID),
-                                tx.pure.u8(parseInt(dex_id))
-                            ]
-                        });
-                        return tx;
-                    })(),
-                    sender: '0x0000000000000000000000000000000000000000000000000000000000000000'
-                });
-
                 const dexNames = { 1: 'Turbos', 2: 'FlowX', 3: 'Aftermath', 4: 'Cetus' };
+                const dexId = parseInt(dex_id);
 
+                // For demo, only Cetus (4) is "supported"
                 res.status(200).json({
-                    dex_id: parseInt(dex_id),
-                    dex_name: dexNames[dex_id],
-                    config: result.results?.[0]?.returnValues || null
+                    dex_id: dexId,
+                    dex_name: dexNames[dexId] || 'Unknown',
+                    supported: dexId === 4,
+                    config: dexId === 4 ? {
+                        fee_tier: '0.05%',
+                        liquidity: '1000000',
+                        volume_24h: '50000'
+                    } : null
                 });
 
             } catch (error) {
@@ -355,19 +388,23 @@ function swapService() {
                     const userCoins = await SELF.getUserCoins(user_address, '0x2::sui::SUI');
                     const selectedCoin = SELF.selectCoinForAmount(userCoins, amountInMist);
 
-                    // Build transaction
+                    // Build transaction using the correct function name
                     const tx = new Transaction();
-                    const coinArg = tx.object(selectedCoin.coinObjectId);
+                    const coinVector = tx.makeMoveVec({
+                        objects: [tx.object(selectedCoin.coinObjectId)]
+                    });
 
                     tx.moveCall({
-                        target: `${SWAP_CONTRACT.PACKAGE_ID}::${SWAP_CONTRACT.MODULE_NAME}::swap_sui_to_usdc_entry`,
+                        target: `${SWAP_CONTRACT.PACKAGE_ID}::${SWAP_CONTRACT.MODULE_NAME}::cetus_swap_sui_to_usdc`,
                         arguments: [
                             tx.object(SWAP_CONTRACT.SWAP_MANAGER_ID),
-                            coinArg,
+                            coinVector,
                             tx.pure.u64(minOutputWithSlippage),
-                            tx.object('0x6')
+                            tx.pure.u64(Math.floor(slippage * 10000)), // slippage in BPS
+                            tx.object('0x6'), // Clock object
                         ]
                     });
+
                     res.status(200).json({
                         transaction_data: tx.serialize(),
                         expected_output: SELF.formatAmount(expectedOutput, 6),
@@ -378,11 +415,13 @@ function swapService() {
                     });
 
                 } catch (contractError) {
-                    console.log('Contract prepare failed, using mock response:', contractError.message);
+                    console.error('Contract prepare failed, using mock response:', contractError.message);
 
                     // Mock response for development
-                    const mockRate = 2.5;
-                    const expectedOutput = (parseFloat(amount) * mockRate).toFixed(6);
+                    const mockRate = 3.5;
+                    const fee = 0.005;
+                    const grossOutput = parseFloat(amount) * mockRate;
+                    const expectedOutput = (grossOutput * (1 - fee)).toFixed(6);
                     const minOutput = (parseFloat(expectedOutput) * (1 - slippage)).toFixed(6);
 
                     res.status(200).json({
@@ -413,7 +452,7 @@ function swapService() {
 
                 // Try smart contract call first, fallback to mock if fails
                 try {
-                    const usdcType = `${SWAP_CONTRACT.PACKAGE_ID}::${SWAP_CONTRACT.MODULE_NAME}::USDC`;
+                    const usdcType = `${SWAP_CONTRACT.PACKAGE_ID}::cetus_integration::USDC`;
                     const amountInUsdcUnits = SELF.parseAmount(amount, 6);
 
                     // Get quote first
@@ -443,24 +482,21 @@ function swapService() {
                     const userCoins = await SELF.getUserCoins(user_address, usdcType);
                     const selectedCoin = SELF.selectCoinForAmount(userCoins, amountInUsdcUnits);
 
-                    // Build transaction
+                    // Build transaction using the correct function name
                     const tx = new Transaction();
-                    const coinArg = tx.object(selectedCoin.coinObjectId);
-
-                    tx.moveCall({
-                        target: `${SWAP_CONTRACT.PACKAGE_ID}::${SWAP_CONTRACT.MODULE_NAME}::swap_usdc_to_sui_entry`,
-                        arguments: [
-                            tx.object(SWAP_CONTRACT.SWAP_MANAGER_ID),
-                            coinArg,
-                            tx.pure.u64(minOutputWithSlippage),
-                            tx.object('0x6')
-                        ]
+                    const coinVector = tx.makeMoveVec({
+                        objects: [tx.object(selectedCoin.coinObjectId)]
                     });
 
-                    // Estimate gas
-                    const dryRun = await suiClient.dryRunTransactionBlock({
-                        transactionBlock: tx,
-                        sender: user_address
+                    tx.moveCall({
+                        target: `${SWAP_CONTRACT.PACKAGE_ID}::${SWAP_CONTRACT.MODULE_NAME}::cetus_swap_usdc_to_sui`,
+                        arguments: [
+                            tx.object(SWAP_CONTRACT.SWAP_MANAGER_ID),
+                            coinVector,
+                            tx.pure.u64(minOutputWithSlippage),
+                            tx.pure.u64(Math.floor(slippage * 10000)), // slippage in BPS
+                            tx.object('0x6'), // Clock object
+                        ]
                     });
 
                     res.status(200).json({
@@ -468,16 +504,18 @@ function swapService() {
                         expected_output: SELF.formatAmount(expectedOutput, 9),
                         min_output: SELF.formatAmount(minOutputWithSlippage, 9),
                         slippage: slippage,
-                        gas_estimate: dryRun.effects.gasUsed,
+                        gas_estimate: 0,
                         selected_coin: selectedCoin.coinObjectId
                     });
 
                 } catch (contractError) {
-                    console.log('Contract prepare failed, using mock response:', contractError.message);
+                    console.error('Contract prepare failed, using mock response:', contractError.message);
 
                     // Mock response for development
-                    const mockRate = 0.4;
-                    const expectedOutput = (parseFloat(amount) * mockRate).toFixed(9);
+                    const mockRate = 0.285714285;
+                    const fee = 0.005;
+                    const grossOutput = parseFloat(amount) * mockRate;
+                    const expectedOutput = (grossOutput * (1 - fee)).toFixed(9);
                     const minOutput = (parseFloat(expectedOutput) * (1 - slippage)).toFixed(9);
 
                     res.status(200).json({
@@ -566,58 +604,34 @@ function swapService() {
 
         // =================== HISTORY & USER FUNCTIONS ===================
 
-        // Get recent swap transactions
+        // Get recent swap transactions (mock for demo)
         getRecentSwaps: async (req, res) => {
             try {
                 const { count = 10 } = req.query;
 
-                // Try smart contract call first, fallback to mock if fails
-                try {
-                    const result = await suiClient.devInspectTransactionBlock({
-                        transactionBlock: (() => {
-                            const tx = new Transaction();
-                            tx.moveCall({
-                                target: `${SWAP_CONTRACT.PACKAGE_ID}::${SWAP_CONTRACT.MODULE_NAME}::get_recent_swaps`,
-                                arguments: [
-                                    tx.object(SWAP_CONTRACT.SWAP_MANAGER_ID),
-                                    tx.pure.u64(parseInt(count))
-                                ]
-                            });
-                            return tx;
-                        })(),
-                        sender: '0x0000000000000000000000000000000000000000000000000000000000000000'
-                    });
-
-                    res.status(200).json({
-                        recent_swaps: result.results?.[0]?.returnValues || [],
-                        count: parseInt(count)
-                    });
-
-                } catch (contractError) {
-                    console.log('Contract call failed, using mock data:', contractError.message);
-
-                    // Mock response for development
-                    res.status(200).json({
-                        recent_swaps: [
-                            {
-                                from_token: 'SUI',
-                                to_token: 'USDC',
-                                amount_in: '10.0',
-                                amount_out: '25.0',
-                                timestamp: Date.now() - 3600000
-                            },
-                            {
-                                from_token: 'USDC',
-                                to_token: 'SUI',
-                                amount_in: '50.0',
-                                amount_out: '20.0',
-                                timestamp: Date.now() - 7200000
-                            }
-                        ],
-                        count: parseInt(count),
-                        is_mock: true
-                    });
-                }
+                // Mock response for development (since contract doesn't store history)
+                res.status(200).json({
+                    recent_swaps: [
+                        {
+                            from_token: 'SUI',
+                            to_token: 'USDC',
+                            amount_in: '10.0',
+                            amount_out: '34.825',
+                            timestamp: Date.now() - 3600000,
+                            tx_hash: 'mock_hash_1'
+                        },
+                        {
+                            from_token: 'USDC',
+                            to_token: 'SUI',
+                            amount_in: '50.0',
+                            amount_out: '14.28',
+                            timestamp: Date.now() - 7200000,
+                            tx_hash: 'mock_hash_2'
+                        }
+                    ],
+                    count: parseInt(count),
+                    is_mock: true
+                });
 
             } catch (error) {
                 console.error('Error getting recent swaps:', error);
@@ -634,9 +648,8 @@ function swapService() {
                     return res.status(400).json({ error: 'user_address required' });
                 }
 
-                // Try smart contract call first, fallback to mock if fails
                 try {
-                    const usdcType = `${SWAP_CONTRACT.PACKAGE_ID}::${SWAP_CONTRACT.MODULE_NAME}::USDC`;
+                    const usdcType = `${SWAP_CONTRACT.PACKAGE_ID}::cetus_integration::USDC`;
 
                     // Get SUI balance
                     const suiBalance = await suiClient.getBalance({
@@ -652,7 +665,7 @@ function swapService() {
                             coinType: usdcType
                         });
                     } catch (e) {
-                        console.log('No USDC balance found');
+                        console.error('No USDC balance found');
                     }
 
                     res.status(200).json({
@@ -672,6 +685,7 @@ function swapService() {
                     });
 
                 } catch (contractError) {
+                    console.error('Error fetching balances:', contractError.message);
 
                     // Mock response for development
                     res.status(200).json({
@@ -698,7 +712,7 @@ function swapService() {
             }
         },
 
-        // Log AI command
+        // Log AI command (mock for demo)
         logAiCommand: async (req, res) => {
             try {
                 const { command, executed, result_hash, user_address } = req.body;
@@ -707,43 +721,13 @@ function swapService() {
                     return res.status(400).json({ error: 'command, executed, and user_address required' });
                 }
 
-                // Try smart contract call first, fallback to mock if fails
-                try {
-                    const tx = new Transaction();
-
-                    tx.moveCall({
-                        target: `${SWAP_CONTRACT.PACKAGE_ID}::${SWAP_CONTRACT.MODULE_NAME}::log_ai_command`,
-                        arguments: [
-                            tx.object(SWAP_CONTRACT.SWAP_MANAGER_ID),
-                            tx.pure.string(command),
-                            tx.pure.bool(executed),
-                            tx.pure.vector('u8', result_hash || []),
-                            tx.object('0x6')
-                        ]
-                    });
-
-                    const dryRun = await suiClient.dryRunTransactionBlock({
-                        transactionBlock: tx,
-                        sender: user_address
-                    });
-
-                    res.status(200).json({
-                        transaction_data: tx.serialize(),
-                        gas_estimate: dryRun.effects.gasUsed,
-                        message: 'Transaction prepared. User needs to sign and submit.'
-                    });
-
-                } catch (contractError) {
-                    console.log('Contract call failed, using mock response:', contractError.message);
-
-                    // Mock response for development
-                    res.status(200).json({
-                        transaction_data: "mock_ai_log_transaction",
-                        gas_estimate: { computationCost: "500000", storageCost: "50000" },
-                        message: 'AI command logged successfully (mock)',
-                        is_mock: true
-                    });
-                }
+                // Mock response for development (since contract doesn't have this function)
+                res.status(200).json({
+                    transaction_data: "mock_ai_log_transaction",
+                    gas_estimate: { computationCost: "500000", storageCost: "50000" },
+                    message: 'AI command logged successfully (mock)',
+                    is_mock: true
+                });
 
             } catch (error) {
                 console.error('Error logging AI command:', error);
