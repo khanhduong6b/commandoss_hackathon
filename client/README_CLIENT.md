@@ -73,7 +73,7 @@ pnpm build
 ```
 
 ### Development Server
-The client runs on `http://localhost:5173` and automatically proxies API calls to the backend server at `http://localhost:3000`.
+The client runs on `http://localhost:5173` and automatically proxies API calls to the backend server at `https://commandoss-server.duongfinance.com`.
 
 ## 🏗️ Project Structure
 
@@ -106,9 +106,9 @@ The Vite development server is configured to proxy API calls to the backend:
 server: {
   proxy: {
     '/api': {
-      target: 'http://localhost:3000',
+      target: 'https://commandoss-server.duongfinance.com',
       changeOrigin: true,
-      rewrite: (path) => path.replace(/^\http://localhost:3000/v1/, '')
+      rewrite: (path) => path.replace(/^\https://commandoss-server.duongfinance.com/v1/, '')
     }
   }
 }

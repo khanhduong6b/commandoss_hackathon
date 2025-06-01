@@ -32,7 +32,7 @@ export function UserTokens() {
 
         setLoading(true);
         try {
-            const response = await fetch(`http://localhost:3000/api/user/tokens?user_address=${account.address}`);
+            const response = await fetch(`https://commandoss-server.duongfinance.com/api/user/tokens?user_address=${account.address}`);
             const data = await response.json();
 
             // Map server response to our format

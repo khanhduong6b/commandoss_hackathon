@@ -68,7 +68,7 @@ export function AICommand() {
         setLoading(true);
         try {
             // Determine API base URL: use VITE_SERVER_URL if provided, otherwise default to current origin
-            const API_BASE_URL = "http://localhost:3000";
+            const API_BASE_URL = "https://commandoss-server.duongfinance.com";
 
             const response = await fetch(`${API_BASE_URL}/api/ai/command`, {
                 method: "POST",
