@@ -33,7 +33,7 @@ export function SwapInterface() {
 
         setLoading(true);
         try {
-            const response = await fetch(`/api/quote/${swapDirection}?amount=${amount}`);
+            const response = await fetch(`http://localhost:3000/api/quote/${swapDirection}?amount=${amount}`);
             const data = await response.json();
 
             // Map server response to our quote format
@@ -57,7 +57,7 @@ export function SwapInterface() {
         setLoading(true);
         try {
             // Prepare transaction
-            const prepareResponse = await fetch(`/api/prepare/${swapDirection}`, {
+            const prepareResponse = await fetch(`http://localhost:3000/api/prepare/${swapDirection}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

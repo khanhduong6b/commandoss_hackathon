@@ -46,7 +46,7 @@ export function TransactionHistory() {
 
         setLoading(true);
         try {
-            const response = await fetch(`/api/history?count=20`);
+            const response = await fetch(`http://localhost:3000/api/history?count=20`);
             const data = await response.json();
 
             // Map server response to our format
@@ -92,7 +92,7 @@ export function TransactionHistory() {
 
         setSearchLoading(true);
         try {
-            const response = await fetch(`/api/status/${searchHash.trim()}`);
+            const response = await fetch(`http://localhost:3000/api/status/${searchHash.trim()}`);
             const data = await response.json();
 
             // Map server response to our format

@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Theme } from "@radix-ui/themes";
 import App from "./App.tsx";
 import { networkConfig } from "./networkConfig.ts";
+import dotenv from "dotenv";
 
 const queryClient = new QueryClient();
 

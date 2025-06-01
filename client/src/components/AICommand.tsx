@@ -24,6 +24,7 @@ interface AIResponse {
     recommendation: string;
     confidence: number;
     timestamp: string;
+    data?: any;
 }
 
 interface CommandExample {
@@ -41,23 +42,23 @@ export function AICommand() {
     const exampleCommands: CommandExample[] = [
         {
             text: "swap 10 SUI to USDC",
-            description: "Swap tokens with specified amounts"
+            description: "Get real-time swap quote using MCP"
         },
         {
             text: "analyze my portfolio",
-            description: "Get AI analysis of your holdings"
+            description: "AI analysis using MCP data"
         },
         {
             text: "find best liquidity pools",
-            description: "Discover high-yield opportunities"
+            description: "Discover pools via MCP tools"
         },
         {
-            text: "what's the gas fee trend?",
-            description: "Get current gas fee insights"
+            text: "show me DEX information",
+            description: "Get DEX configs through MCP"
         },
         {
-            text: "suggest optimal swap route",
-            description: "Find the most efficient trading path"
+            text: "what trading pairs are available?",
+            description: "List available pairs via MCP"
         }
     ];
 
@@ -66,34 +67,46 @@ export function AICommand() {
 
         setLoading(true);
         try {
-            // Log the AI command
-            const logResponse = await fetch("/api/ai/log", {
+            // Determine API base URL: use VITE_SERVER_URL if provided, otherwise default to current origin
+            const API_BASE_URL = "http://localhost:3000";
+
+            const response = await fetch(`${API_BASE_URL}/api/ai/command`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     command: command.trim(),
-                    executed: false, // Will be true when command is actually executed
-                    user_address: account.address,
-                    result_hash: null // Optional, can be added later
+                    user_address: account.address
                 })
             });
 
-            if (logResponse.ok) {
-                // Simulate AI response (in real implementation, this would call an AI service)
-                const aiResponse: AIResponse = {
-                    command: command.trim(),
-                    analysis: `Based on your command "${command.trim()}", I analyzed current market conditions and your portfolio status.`,
-                    recommendation: "I recommend checking the current market conditions and ensuring you have sufficient balance for the transaction. Consider the gas fees and slippage tolerance.",
-                    confidence: Math.floor(Math.random() * 30) + 70, // Random confidence between 70-99%
-                    timestamp: new Date().toISOString()
-                };
-
+            if (response.ok) {
+                const aiResponse: AIResponse = await response.json();
                 setResponse(aiResponse);
                 setCommandHistory(prev => [aiResponse, ...prev.slice(0, 4)]); // Keep last 5 commands
                 setCommand("");
+            } else {
+                const error = await response.json();
+                console.error("AI API error:", error);
+                // Show error response
+                const errorResponse: AIResponse = {
+                    command: command.trim(),
+                    analysis: "I encountered an error processing your request.",
+                    recommendation: `Error: ${error.error || 'Unknown error occurred'}`,
+                    confidence: 0,
+                    timestamp: new Date().toISOString()
+                };
+                setResponse(errorResponse);
             }
         } catch (error) {
             console.error("Error sending AI command:", error);
+            const errorResponse: AIResponse = {
+                command: command.trim(),
+                analysis: "I couldn't process your request due to a connection error.",
+                recommendation: "Please check your connection and try again.",
+                confidence: 0,
+                timestamp: new Date().toISOString()
+            };
+            setResponse(errorResponse);
         } finally {
             setLoading(false);
         }
@@ -119,7 +132,7 @@ export function AICommand() {
     return (
         <Box>
             <Heading size="5" mb="4" style={{ color: "var(--blue-11)" }}>
-                AI Portfolio Assistant
+                AI Portfolio Assistant (MCP Powered)
             </Heading>
 
             {/* Command Input */}
@@ -127,7 +140,7 @@ export function AICommand() {
                 <Flex direction="column" gap="3">
                     <Flex gap="2" align="center">
                         <ChatBubbleIcon style={{ color: "var(--blue-11)" }} />
-                        <Text size="3" weight="medium">Ask me anything about your portfolio or trading</Text>
+                        <Text size="3" weight="medium">Ask me anything - powered by MCP tools</Text>
                     </Flex>
 
                     <textarea
@@ -161,7 +174,7 @@ export function AICommand() {
                             disabled={!command.trim() || loading}
                         >
                             {loading ? <LightningBoltIcon className="animate-pulse" /> : <PaperPlaneIcon />}
-                            Send Command
+                            {loading ? "Processing..." : "Send Command"}
                         </Button>
                     </Flex>
                 </Flex>
@@ -170,7 +183,7 @@ export function AICommand() {
             {/* Example Commands */}
             <Card style={{ padding: "20px", background: "var(--blue-a2)", marginBottom: "20px" }}>
                 <Text size="3" weight="medium" mb="3" style={{ color: "var(--blue-11)" }}>
-                    Try these example commands:
+                    Try these MCP-powered commands:
                 </Text>
                 <Flex direction="column" gap="2">
                     {exampleCommands.map((example, index) => (
@@ -202,13 +215,13 @@ export function AICommand() {
 
             {/* Current Response */}
             {response && (
-                <Card style={{ padding: "24px", background: "var(--green-a2)", marginBottom: "20px" }}>
+                <Card style={{ padding: "24px", background: response.confidence > 50 ? "var(--green-a2)" : "var(--orange-a2)", marginBottom: "20px" }}>
                     <Flex direction="column" gap="3">
                         <Flex justify="between" align="center">
-                            <Text size="3" weight="bold" style={{ color: "var(--green-11)" }}>
-                                AI Response
+                            <Text size="3" weight="bold" style={{ color: response.confidence > 50 ? "var(--green-11)" : "var(--orange-11)" }}>
+                                MCP AI Response
                             </Text>
-                            <Badge color="green">
+                            <Badge color={response.confidence > 50 ? "green" : response.confidence > 0 ? "orange" : "red"}>
                                 {response.confidence}% Confidence
                             </Badge>
                         </Flex>
@@ -241,6 +254,54 @@ export function AICommand() {
                             <Text size="2">{response.recommendation}</Text>
                         </Box>
 
+                        {/* Show MCP data if available */}
+                        {response.data && (
+                            <Box>
+                                <Text size="2" weight="medium" mb="2" style={{ color: "var(--gray-12)" }}>
+                                    MCP Data:
+                                </Text>
+
+                                {/* Render formatted swap quote if fields detected */}
+                                {response.data.input_amount !== undefined && response.data.output_amount !== undefined && response.data.rate !== undefined ? (
+                                    <Box style={{ marginLeft: "20px" }}>
+                                        <ul style={{ listStyleType: "disc", paddingLeft: "16px" }}>
+                                            <li>
+                                                <Text size="2">
+                                                    <strong>Input:</strong> {response.data.input_amount} {response.data.input_token}
+                                                </Text>
+                                            </li>
+                                            <li>
+                                                <Text size="2">
+                                                    <strong>Output:</strong> {response.data.output_amount} {response.data.output_token}
+                                                </Text>
+                                            </li>
+                                            <li>
+                                                <Text size="2">
+                                                    <strong>Exchange Rate:</strong> 1 {response.data.input_token} = {Number(response.data.rate).toFixed(6)} {response.data.output_token}
+                                                </Text>
+                                            </li>
+                                            <li>
+                                                <Text size="2">
+                                                    <strong>Raw Output:</strong> {response.data.raw_output}
+                                                </Text>
+                                            </li>
+                                        </ul>
+                                    </Box>
+                                ) : (
+                                    <pre style={{
+                                        background: "var(--gray-a3)",
+                                        padding: "12px",
+                                        borderRadius: "6px",
+                                        fontSize: "12px",
+                                        overflow: "auto",
+                                        maxHeight: "200px"
+                                    }}>
+                                        {JSON.stringify(response.data, null, 2)}
+                                    </pre>
+                                )}
+                            </Box>
+                        )}
+
                         <Text size="1" style={{ color: "var(--gray-11)" }}>
                             {new Date(response.timestamp).toLocaleString()}
                         </Text>
@@ -252,7 +313,7 @@ export function AICommand() {
             {commandHistory.length > 0 && (
                 <Card style={{ padding: "24px", background: "var(--gray-a1)" }}>
                     <Heading size="4" mb="3" style={{ color: "var(--gray-12)" }}>
-                        Recent Commands
+                        Recent MCP Commands
                     </Heading>
 
                     <Flex direction="column" gap="3">
@@ -266,7 +327,7 @@ export function AICommand() {
                                                 "{item.command}"
                                             </Text>
                                         </Flex>
-                                        <Badge variant="soft" color="blue">
+                                        <Badge variant="soft" color={item.confidence > 50 ? "blue" : "orange"}>
                                             {item.confidence}%
                                         </Badge>
                                     </Flex>

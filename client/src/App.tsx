@@ -48,7 +48,6 @@ function App() {
           <Tabs.Root defaultValue="swap">
             <Tabs.List size="2" style={{ marginBottom: "20px" }}>
               <Tabs.Trigger value="swap">Swap Tokens</Tabs.Trigger>
-              <Tabs.Trigger value="pools">Pool Info</Tabs.Trigger>
               <Tabs.Trigger value="tokens">My Tokens</Tabs.Trigger>
               <Tabs.Trigger value="history">History</Tabs.Trigger>
               <Tabs.Trigger value="ai">AI Assistant</Tabs.Trigger>
